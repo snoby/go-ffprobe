@@ -2,20 +2,26 @@ package ffprobe
 
 import (
 	"encoding/json"
+	"errors"
 	"os/exec"
 )
 
 type container struct {
 	Streams []*Stream `json:"streams"`
+	Format  *Format   `json:"format"`
 }
 
 // Handler wraps a file.
 type Handler struct {
 	File string
+	data *container
 }
 
-// Streams returns the stream information.
-func (h *Handler) Streams() (streams []*Stream, err error) {
+func (h *Handler) getData() (err error) {
+	if h.data != nil && h.data.Streams != nil && h.data.Format != nil {
+		return
+	}
+
 	var (
 		rawData []byte
 	)
@@ -39,7 +45,39 @@ func (h *Handler) Streams() (streams []*Stream, err error) {
 		return
 	}
 
-	streams = c.Streams
+	h.data = c
+
+	return
+}
+
+// Streams returns the stream information.
+func (h *Handler) Streams() (streams []*Stream, err error) {
+	if err = h.getData(); err != nil {
+		return
+	}
+
+	if h.data.Streams == nil {
+		err = errors.New("could not get stream info")
+		return
+	}
+
+	streams = h.data.Streams
+
+	return
+}
+
+// Format returns the format information.
+func (h *Handler) Format() (format *Format, err error) {
+	if err = h.getData(); err != nil {
+		return
+	}
+
+	if h.data.Format == nil {
+		err = errors.New("could not get format info")
+		return
+	}
+
+	format = h.data.Format
 
 	return
 }
